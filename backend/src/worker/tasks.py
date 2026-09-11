@@ -11,7 +11,6 @@
 import asyncio
 import logging
 from collections.abc import Awaitable, Callable
-from typing import TypeVar
 
 from src.core.config import get_settings
 from src.core.db import get_session_maker
@@ -22,8 +21,6 @@ from src.worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
-
-T = TypeVar("T")
 
 RETRY_KWARGS = {
     "autoretry_for": (Exception,),
@@ -36,7 +33,7 @@ RETRY_KWARGS = {
 _worker_loop: asyncio.AbstractEventLoop | None = None
 
 
-def run_in_worker_loop(coroutine: Awaitable[T]) -> T:
+def run_in_worker_loop[T](coroutine: Awaitable[T]) -> T:
     """Выполнить корутину в event loop процесса-воркера.
 
     Луп создаётся один на процесс и переиспользуется: пул соединений SQLAlchemy привязан
@@ -49,7 +46,7 @@ def run_in_worker_loop(coroutine: Awaitable[T]) -> T:
     return _worker_loop.run_until_complete(coroutine)
 
 
-async def _with_service(action: Callable[[FileService], Awaitable[T]]) -> T:
+async def _with_service[T](action: Callable[[FileService], Awaitable[T]]) -> T:
     async with get_session_maker()() as session:
         return await action(FileService(session=session, storage=get_storage(), settings=settings))
 

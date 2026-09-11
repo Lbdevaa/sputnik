@@ -57,8 +57,12 @@ async def client(
         yield client
 
 
-async def upload(client: httpx.AsyncClient, name: str = "sample.txt", data: bytes = SAMPLE_TXT, **kwargs):
-    return await client.post("/files", data={"title": "t"}, files={"file": (name, data, "text/plain")}, **kwargs)
+async def upload(
+    client: httpx.AsyncClient, name: str = "sample.txt", data: bytes = SAMPLE_TXT, **kwargs
+):
+    return await client.post(
+        "/files", data={"title": "t"}, files={"file": (name, data, "text/plain")}, **kwargs
+    )
 
 
 async def test_upload_returns_201_and_enqueues_scan(client: httpx.AsyncClient, scan_task: FakeTask):
@@ -72,7 +76,9 @@ async def test_upload_returns_201_and_enqueues_scan(client: httpx.AsyncClient, s
     assert scan_task.calls == [body["id"]]
 
 
-async def test_upload_succeeds_even_if_broker_is_down(client: httpx.AsyncClient, scan_task: FakeTask):
+async def test_upload_succeeds_even_if_broker_is_down(
+    client: httpx.AsyncClient, scan_task: FakeTask
+):
     """A7: файл уже сохранён, клиент не должен получать 500 из-за Redis."""
     scan_task.error = ConnectionError("redis is down")
 
@@ -130,7 +136,9 @@ async def test_download(client: httpx.AsyncClient):
     assert 'filename="sample.txt"' in response.headers["content-disposition"]
 
 
-async def test_download_without_stored_file_is_404(client: httpx.AsyncClient, storage: LocalFileStorage):
+async def test_download_without_stored_file_is_404(
+    client: httpx.AsyncClient, storage: LocalFileStorage
+):
     body = (await upload(client)).json()
     await storage.delete(f"{body['id']}.txt")
 
@@ -163,7 +171,9 @@ async def test_files_are_paginated_newest_first(client: httpx.AsyncClient):
 
     assert first["total"] == 3
     assert (first["limit"], first["offset"]) == (2, 0)
-    assert [item["id"] for item in first["items"]] + [item["id"] for item in second["items"]] == ids[::-1]
+    assert [item["id"] for item in first["items"]] + [
+        item["id"] for item in second["items"]
+    ] == ids[::-1]
 
 
 async def test_pagination_bounds_are_validated(client: httpx.AsyncClient):

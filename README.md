@@ -5,16 +5,87 @@ Python + React
 2. ```docker compose -f docker-compose.dev.yml up```
 3. ```docker exec -it backend alembic upgrade head```
 
-**Тесты бэкенда** (без Postgres и Redis, но внутри контейнера, чтобы не ставить Python 3.14 локально):
+**Тесты и линт бэкенда** (без Postgres и Redis, но внутри контейнера, чтобы не ставить Python 3.14 локально):
 ```
-docker compose -f docker-compose.dev.yml run --rm --no-deps backend pytest
+docker compose -f docker-compose.dev.yml run --rm --no-deps backend sh -c "ruff check . && pytest"
 ```
+
+**Проверки фронта:** ```cd frontend && npm ci && npm run check```
 
 **Прогон сценариев на живом стенде:** ```./scripts/smoke.sh```
 
 **фронт:** ```http://localhost:3000/test```
 
 **бэк:** ```http://localhost:8000/docs```
+
+![Интерфейс: таблицы файлов и алертов](screenshot.png)
+
+---
+
+# Стек и версии
+
+Версии — из lock-файлов (`backend/uv.lock`, `frontend/package-lock.json`), то есть ровно то,
+что ставится в образ. В `pyproject.toml` заданы нижние границы, в `package.json` — точные
+версии без `^`.
+
+## Бэкенд
+
+Python 3.14 (`python:3.14-slim`), пакетный менеджер uv. Инфраструктура: `postgres:18`, `redis:8`.
+
+| Библиотека | Версия | Зачем |
+|---|---|---|
+| fastapi | 0.135.3 | HTTP-слой, роутеры, DI |
+| starlette | 1.0.0 | транзитивно через FastAPI: `FileResponse`, `Request`, коды статусов |
+| uvicorn | 0.42.0 | ASGI-сервер |
+| pydantic | 2.12.5 | схемы запросов и ответов |
+| pydantic-settings | 2.15.0 | конфигурация из окружения с валидацией |
+| sqlalchemy | 2.0.48 | ORM, async-движок и сессии |
+| asyncpg | 0.31.0 | драйвер Postgres |
+| alembic | 1.18.4 | миграции |
+| celery | 5.6.3 | очередь задач (extra `redis`) |
+| redis | 6.4.0 | транзитивно через `celery[redis]`: клиент брокера |
+| kombu / billiard | 5.6.2 / 4.2.4 | транзитивно через Celery: транспорт сообщений и prefork-пул |
+| aiofiles | 25.1.0 | потоковая запись и чтение файлов без блокировки event loop |
+| python-multipart | 0.0.22 | разбор multipart при загрузке |
+
+Только для разработки и тестов (группа `dev`; при сборке с `UV_NO_DEV=1` в образ не попадает):
+
+| Библиотека | Версия | Зачем |
+|---|---|---|
+| pytest | 9.1.1 | тесты |
+| pytest-asyncio | 1.4.0 | async-тесты и фикстуры |
+| httpx | 0.28.1 | клиент к ASGI-приложению в тестах API |
+| aiosqlite | 0.22.1 | SQLite вместо Postgres в интеграционных тестах |
+| ruff | 0.16.7 | линтер и форматтер |
+
+## Фронтенд
+
+Node 22 (`node:22-alpine`), npm.
+
+| Библиотека | Версия | Зачем |
+|---|---|---|
+| next | 16.1.6 | фреймворк: app router, `basePath: /test`, standalone-сборка |
+| react / react-dom | 18.3.1 | UI |
+| react-bootstrap | 2.10.10 | компоненты: таблица, модальное окно, бейджи, пагинация |
+| bootstrap | 5.3.8 | стили |
+
+Только для разработки:
+
+| Библиотека | Версия | Зачем |
+|---|---|---|
+| typescript | 5.9.3 | типизация, `strict: true` |
+| @types/react / @types/react-dom | 18.3.31 / 18.3.7 | типы под React 18 |
+| @types/node | 22.20.2 | типы Node; требование vitest 5 |
+| eslint | 9.39.5 | линтер |
+| eslint-config-next | 16.1.6 | правила Next, React Hooks, TypeScript |
+| eslint-config-prettier | 10.1.8 | снимает правила, конфликтующие с Prettier |
+| prettier | 3.9.6 | форматирование |
+| vitest | 5.0.0 | тесты чистых функций (тянет vite 8.3.0) |
+
+**Совместимость Next 16 и React 18.** Next 16 допускает React 18.2+ в peer-зависимостях,
+а в app router использует собственную вшитую копию React, поэтому пара 16.1.6 / 18.3.1
+собирается и работает — подтверждено сборкой и браузерным прогоном. Переход на React 19 —
+отдельное решение, в задание не входящее.
 
 ---
 
@@ -186,8 +257,21 @@ api  →  services  →  repositories  →  models
   Redis и настоящего воркера — 23 проверки, включая подмену Content-Type и удаление файла
   с алертом.
 
+- **Фронт** (`frontend/src/**/*.test.ts`, Vitest): форматтеры, сортировка и фильтр таблицы,
+  представление статусов, уровни алертов. Плюс `tsc --noEmit`, ESLint с правилами слоёв
+  и Prettier — всё вместе `npm run check`.
+- **Линт бэкенда**: ruff (`E`, `F`, `I`, `UP`, `B`, `ASYNC`) и `ruff format --check`.
+
+**CI.** [.github/workflows/ci.yml](.github/workflows/ci.yml): три задания — бэкенд (ruff +
+pytest), фронт (typecheck + lint + format + vitest + `next build`) и smoke: поднимает стенд
+через `docker compose`, применяет миграции и гоняет `scripts/smoke.sh`. Стек компании —
+GitLab, поэтому рядом лежит [.gitlab-ci.yml](.gitlab-ci.yml) с теми же двумя заданиями
+без smoke: ему нужен docker-in-docker, а это зависит от инсталляции.
+
 Что не покрыто и почему: особенности Postgres (каскад на уровне СУБД, типы) проверяются
-только smoke-прогоном — testcontainers ради тестового не тянул; фронт — на своём этапе.
+только smoke-прогоном — testcontainers ради тестового не тянул. Компонентные тесты и e2e
+на фронте легли бы поверх (Testing Library, Playwright), но для тестового не окупаются:
+живой прогон в браузере сделан руками при сдаче этапа.
 
 ## Что осталось за рамками
 

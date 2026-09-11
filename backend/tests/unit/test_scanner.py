@@ -15,13 +15,37 @@ MB = 1024 * 1024
     ("filename", "size", "media_type", "status", "details"),
     [
         ("sample.txt", 29, "text/plain", ScanStatus.CLEAN, "no threats found"),
-        ("sample.exe", 28, "application/x-msdownload", ScanStatus.SUSPICIOUS, "suspicious extension .exe"),
+        (
+            "sample.exe",
+            28,
+            "application/x-msdownload",
+            ScanStatus.SUSPICIOUS,
+            "suspicious extension .exe",
+        ),
         ("sample.pdf", 123, "application/pdf", ScanStatus.CLEAN, "no threats found"),
-        ("big.bin", 11_000_000, "application/octet-stream", ScanStatus.SUSPICIOUS, "file is larger than 10 MB"),
+        (
+            "big.bin",
+            11_000_000,
+            "application/octet-stream",
+            ScanStatus.SUSPICIOUS,
+            "file is larger than 10 MB",
+        ),
         ("script.js", 10, "text/plain", ScanStatus.SUSPICIOUS, "suspicious extension .js"),
         ("run.sh", 10, "text/plain", ScanStatus.SUSPICIOUS, "suspicious extension .sh"),
-        ("ARCHIVE.EXE", 10, "application/x-msdownload", ScanStatus.SUSPICIOUS, "suspicious extension .exe"),
-        ("fake.pdf", 10, "text/plain", ScanStatus.SUSPICIOUS, "pdf extension does not match mime type"),
+        (
+            "ARCHIVE.EXE",
+            10,
+            "application/x-msdownload",
+            ScanStatus.SUSPICIOUS,
+            "suspicious extension .exe",
+        ),
+        (
+            "fake.pdf",
+            10,
+            "text/plain",
+            ScanStatus.SUSPICIOUS,
+            "pdf extension does not match mime type",
+        ),
         ("blob.pdf", 10, "application/octet-stream", ScanStatus.CLEAN, "no threats found"),
     ],
 )
@@ -45,15 +69,21 @@ def test_reasons_are_joined_in_rule_order():
 
 
 def test_size_threshold_is_strict():
-    exactly = scan(filename="a.bin", size=DEFAULT_SUSPICIOUS_SIZE, media_type="application/octet-stream")
-    over = scan(filename="a.bin", size=DEFAULT_SUSPICIOUS_SIZE + 1, media_type="application/octet-stream")
+    exactly = scan(
+        filename="a.bin", size=DEFAULT_SUSPICIOUS_SIZE, media_type="application/octet-stream"
+    )
+    over = scan(
+        filename="a.bin", size=DEFAULT_SUSPICIOUS_SIZE + 1, media_type="application/octet-stream"
+    )
 
     assert exactly.status is ScanStatus.CLEAN
     assert over.status is ScanStatus.SUSPICIOUS
 
 
 def test_threshold_comes_from_settings_not_from_constant():
-    result = scan(filename="a.bin", size=2 * MB, media_type="application/octet-stream", suspicious_size=MB)
+    result = scan(
+        filename="a.bin", size=2 * MB, media_type="application/octet-stream", suspicious_size=MB
+    )
 
     assert result.details == "file is larger than 1 MB"
 

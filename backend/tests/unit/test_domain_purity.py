@@ -43,4 +43,6 @@ def test_domain_imports_only_stdlib_and_itself(module: Path):
 )
 def test_http_framework_lives_only_in_api(module: Path):
     for name in imported_modules(module):
-        assert not name.startswith(FORBIDDEN_OUTSIDE_API), f"{module.relative_to(SRC)} imports {name}"
+        assert not name.startswith(FORBIDDEN_OUTSIDE_API), (
+            f"{module.relative_to(SRC)} imports {name}"
+        )

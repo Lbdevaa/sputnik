@@ -1,5 +1,6 @@
 import logging
 from collections.abc import AsyncIterator
+from typing import Annotated
 
 from fastapi import APIRouter, File, Form, UploadFile, status
 from fastapi.responses import FileResponse
@@ -27,8 +28,8 @@ async def list_files(service: FileServiceDep, page: PageDep) -> Page[FileItem]:
 @router.post("", response_model=FileItem, status_code=status.HTTP_201_CREATED)
 async def create_file(
     service: FileServiceDep,
-    title: str = Form(...),
-    file: UploadFile = File(...),
+    title: Annotated[str, Form()],
+    file: Annotated[UploadFile, File()],
 ) -> FileItem:
     file_item = await service.upload(
         title=title,

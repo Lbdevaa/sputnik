@@ -2,7 +2,12 @@
 
 import pytest
 
-from src.domain.media_type import DEFAULT_MEDIA_TYPE, TEXT_MEDIA_TYPE, detect_media_type, looks_like_text
+from src.domain.media_type import (
+    DEFAULT_MEDIA_TYPE,
+    TEXT_MEDIA_TYPE,
+    detect_media_type,
+    looks_like_text,
+)
 
 PDF_HEAD = b"%PDF-1.4\n1 0 obj\n"
 EXE_HEAD = b"MZ\x90\x00fake executable payload\n"

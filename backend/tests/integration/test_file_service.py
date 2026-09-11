@@ -32,7 +32,9 @@ async def alert_count(session: AsyncSession) -> int:
 
 
 async def test_upload_stores_record_and_file(service: FileService, storage: LocalFileStorage):
-    file_item = await service.upload("t", "sample.txt", stream(SAMPLE_TXT), declared_type="text/plain")
+    file_item = await service.upload(
+        "t", "sample.txt", stream(SAMPLE_TXT), declared_type="text/plain"
+    )
 
     assert file_item.processing_status is ProcessingStatus.UPLOADED
     assert file_item.scan_status is None
@@ -43,12 +45,16 @@ async def test_upload_stores_record_and_file(service: FileService, storage: Loca
 
 
 async def test_upload_detects_type_by_content_not_by_header(service: FileService):
-    file_item = await service.upload("spoof", "doc.pdf", stream(TWO_PAGES_PDF), declared_type="text/plain")
+    file_item = await service.upload(
+        "spoof", "doc.pdf", stream(TWO_PAGES_PDF), declared_type="text/plain"
+    )
 
     assert file_item.mime_type == "application/pdf"
 
 
-async def test_upload_rejects_empty_file_and_leaves_no_trace(service: FileService, storage: LocalFileStorage):
+async def test_upload_rejects_empty_file_and_leaves_no_trace(
+    service: FileService, storage: LocalFileStorage
+):
     with pytest.raises(EmptyFile):
         await service.upload("t", "empty.txt", stream(b""))
 
@@ -57,7 +63,9 @@ async def test_upload_rejects_empty_file_and_leaves_no_trace(service: FileServic
     assert not list((storage._root).iterdir())
 
 
-async def test_upload_over_limit_is_rejected_mid_stream(service: FileService, storage: LocalFileStorage):
+async def test_upload_over_limit_is_rejected_mid_stream(
+    service: FileService, storage: LocalFileStorage
+):
     with pytest.raises(FileTooLarge) as error:
         await service.upload("t", "big.bin", stream(b"x" * (MAX_UPLOAD + 1)))
 
@@ -85,7 +93,9 @@ async def test_upload_removes_file_when_commit_fails(
 
 
 async def test_pipeline_for_text_file_matches_baseline(service: FileService):
-    file_item = await service.upload("t", "sample.txt", stream(SAMPLE_TXT), declared_type="text/plain")
+    file_item = await service.upload(
+        "t", "sample.txt", stream(SAMPLE_TXT), declared_type="text/plain"
+    )
 
     alert = await run_pipeline(service, file_item.id)
 
@@ -117,7 +127,9 @@ async def test_pipeline_for_executable_raises_warning(service: FileService):
 
 
 async def test_pipeline_for_pdf_counts_pages(service: FileService):
-    file_item = await service.upload("t", "two.pdf", stream(TWO_PAGES_PDF), declared_type="application/pdf")
+    file_item = await service.upload(
+        "t", "two.pdf", stream(TWO_PAGES_PDF), declared_type="application/pdf"
+    )
 
     await run_pipeline(service, file_item.id)
 
@@ -132,7 +144,9 @@ async def test_processing_status_is_visible_before_scan(service: FileService, se
     await service.mark_processing(file_item.id)
 
     async with session_maker() as other_session:
-        other = await FileService(other_session, service._storage, service._settings).get(file_item.id)
+        other = await FileService(other_session, service._storage, service._settings).get(
+            file_item.id
+        )
         assert other.processing_status is ProcessingStatus.PROCESSING
         assert other.scan_status is None
 

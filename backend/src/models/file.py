@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, Integer, JSON, String, func
+from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain.enums import ProcessingStatus, ScanStatus
@@ -48,7 +48,7 @@ class StoredFile(Base):
     # Каскад в двух местах сразу и это не дублирование: `cascade` разбирается с объектами,
     # которые ORM уже держит в сессии, `ondelete` (на стороне FK) — со всеми остальными.
     # Без пары «cascade + ondelete» удаление файла с алертом падало с 500 (A1).
-    alerts: Mapped[list["Alert"]] = relationship(
+    alerts: Mapped[list[Alert]] = relationship(
         back_populates="file",
         cascade="all, delete-orphan",
         passive_deletes=True,

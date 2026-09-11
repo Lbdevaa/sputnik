@@ -4,17 +4,13 @@
 это лишний трафик и seq scan с сортировкой, а клиент всё равно показывает экран за раз.
 """
 
-from typing import Generic, TypeVar
-
 from pydantic import BaseModel, Field
-
-T = TypeVar("T")
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
 
 
-class Page(BaseModel, Generic[T]):
+class Page[T](BaseModel):
     items: list[T]
     total: int
     limit: int
