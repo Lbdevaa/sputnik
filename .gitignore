@@ -11,3 +11,5 @@ wheels/
 .idea
 **/.DS_Store
 backend/storage/*
+# Локальное окружение с паролями (И7); шаблон — .env.example
+.env.dev

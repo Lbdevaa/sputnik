@@ -1,38 +1,59 @@
+# Dev-стенд. Что здесь исправлено относительно исходного файла — см. docs/audit.md, блок И.
+
+x-backend: &backend
+  build: ./backend
+  env_file: ".env.dev"
+  volumes:
+    # Код монтируется ради --reload; в образе он тоже есть.
+    - ./backend:/backend
+    # Хранилище файлов — общий именованный том, а не совпадение bind-mount'ов (Б4):
+    # без него воркер не увидел бы файл, который принял backend.
+    - file-storage:/data/files
+  depends_on:
+    backend-db:
+      condition: service_healthy
+    backend-redis:
+      condition: service_healthy
+
 services:
   backend:
-    build: ./backend
+    <<: *backend
     command: uvicorn src.main:app --host 0.0.0.0 --reload --port 8000
     container_name: backend
-    volumes:
-      - ./backend:/backend
-    env_file: ".env.dev"
     ports:
       - "8000:8000"
-    depends_on:
-      - backend-db
 
   backend-worker:
-    build: ./backend
+    <<: *backend
     command: [ 'celery', '-A', 'src.worker.celery_app', 'worker', '-l', 'info' ]
     container_name: backend-worker
-    env_file: ".env.dev"
-    volumes:
-      - ./backend:/backend
-    depends_on:
-      - backend-db
 
   backend-db:
-    image: postgres:latest
+    # Major-версия зафиксирована (И5): плавающий latest мог сменить её между двумя запусками.
+    # В образах PG 18 VOLUME объявлен на /var/lib/postgresql (PGDATA лежит внутри),
+    # поэтому именованный том монтируется именно сюда.
+    image: postgres:18
     container_name: backend-db
-    ports:
-      - "5433:5433"
     env_file: ".env.dev"
+    ports:
+      # Внутри Postgres слушает штатный 5432 (И6), наружу — 5433, чтобы не спорить с локальным.
+      - "5433:5432"
     volumes:
       - backend-db-volume:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 2s
+      timeout: 3s
+      retries: 15
 
   backend-redis:
-    image: redis:latest
+    image: redis:8
     container_name: backend-redis
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 2s
+      timeout: 3s
+      retries: 15
 
   frontend:
     build:
@@ -44,3 +65,4 @@ services:
 
 volumes:
   backend-db-volume:
+  file-storage:

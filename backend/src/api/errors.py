@@ -21,7 +21,7 @@ STATUS_BY_ERROR: dict[type[DomainError], int] = {
     FileNotFound: status.HTTP_404_NOT_FOUND,
     StoredFileMissing: status.HTTP_404_NOT_FOUND,
     EmptyFile: status.HTTP_400_BAD_REQUEST,
-    FileTooLarge: status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+    FileTooLarge: status.HTTP_413_CONTENT_TOO_LARGE,
 }
 
 DETAIL_BY_ERROR: dict[type[DomainError], str] = {
