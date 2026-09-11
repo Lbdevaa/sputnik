@@ -1,0 +1,55 @@
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.domain.enums import ProcessingStatus, ScanStatus
+from src.models.base import Base, enum_column
+
+if TYPE_CHECKING:
+    from src.models.alert import Alert
+
+
+class StoredFile(Base):
+    __tablename__ = "files"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    original_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    stored_name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    mime_type: Mapped[str] = mapped_column(String(255), nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    processing_status: Mapped[ProcessingStatus] = mapped_column(
+        enum_column(ProcessingStatus, "ck_files_processing_status"),
+        nullable=False,
+        default=ProcessingStatus.UPLOADED,
+    )
+    scan_status: Mapped[ScanStatus | None] = mapped_column(
+        enum_column(ScanStatus, "ck_files_scan_status"),
+        nullable=True,
+    )
+    scan_details: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    requires_attention: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Каскад в двух местах сразу и это не дублирование: `cascade` разбирается с объектами,
+    # которые ORM уже держит в сессии, `ondelete` (на стороне FK) — со всеми остальными.
+    # Без пары «cascade + ondelete» удаление файла с алертом падало с 500 (A1).
+    alerts: Mapped[list[Alert]] = relationship(
+        back_populates="file",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )

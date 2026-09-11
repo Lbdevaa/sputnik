@@ -1,29 +1,16 @@
 import type { Metadata } from "next";
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { Container } from "react-bootstrap";
+import "bootstrap/dist/css/bootstrap.min.css";
 
-export async function generateMetadata(): Promise<Metadata> {
-  return {
-    title: 'Тестовое задание Fullstack',
-    description: 'Тестовое задание Fullstack',
-  };
-}
+// Иконка лежит в src/app/favicon.ico: Next сам добавит <link> с учётом basePath (A12).
+export const metadata: Metadata = {
+  title: "Тестовое задание Fullstack",
+  description: "Тестовое задание Fullstack",
+};
 
-export default async function RootLayout({
-  children
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang='ru'>
-      <head>
-        <link rel="icon" href="/public/favicon.ico" sizes="any" />
-      </head>
-      <body>
-        <Container fluid className='p-0'>
-            {children}
-        </Container>
-      </body>
+    <html lang="ru">
+      <body>{children}</body>
     </html>
   );
 }
